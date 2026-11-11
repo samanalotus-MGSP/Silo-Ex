@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แดชบอร์ดอาหารไซโล</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f3f8fc; --surface:#ffffff; --ink:#1e2b37; --muted:#5b6d7c; --line:#e2eaf1;
+  --steel:#2f7fd1; --grain:#f0a92c; --ok:#2fa36b; --bad:#e0523f;
+  --soft:#eef5fb; --shadow:0 1px 2px rgba(30,60,90,.06),0 6px 18px rgba(30,60,90,.07);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;color:var(--ink);font-size:17px;
+  background:linear-gradient(#dfeefb,var(--bg) 280px) no-repeat,var(--bg);
+  font-family:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;line-height:1.55}
+.wrap{max-width:1240px;margin:0 auto;padding:24px 18px 56px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:18px}
+h1{margin:0;font-size:1.75rem;font-weight:700;letter-spacing:-.01em}
+.status{display:flex;align-items:center;gap:8px;font-size:.9rem;color:var(--muted)}
+.dot{width:11px;height:11px;border-radius:50%;background:var(--muted)}
+.dot.ok{background:var(--ok)} .dot.err{background:var(--bad)}
+button,select,input{font:inherit;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+button{cursor:pointer;transition:border-color .15s,background .15s}
+button:hover{border-color:var(--steel)}
+:focus-visible{outline:3px solid #9cc6f3;outline-offset:2px}
+.banner{background:#fff7e3;border:1px solid #f3d58b;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:.95rem}
+.banner.err{background:#fdecea;border-color:#f3b4ab}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.chip{padding:8px 18px;border-radius:999px;font-weight:500;background:var(--surface);box-shadow:var(--shadow);border-color:transparent}
+.chip:hover{background:var(--soft)}
+.chip[aria-current="true"]{background:var(--steel);color:#fff}
+.controls{display:flex;flex-wrap:wrap;gap:14px;align-items:end;margin-bottom:18px}
+.controls label{display:flex;flex-direction:column;gap:5px;font-size:.85rem;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:18px}
+.stat{padding:16px 20px;background:var(--surface);border-radius:14px;box-shadow:var(--shadow);border-top:4px solid var(--steel)}
+.stat:nth-child(2){border-top-color:var(--grain)}
+.stat:nth-child(3){border-top-color:var(--ok)}
+.stat:nth-child(4){border-top-color:#9b7be0}
+.stat .k{font-size:.88rem;color:var(--muted)}
+.stat .v{font-size:1.9rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3}
+.stat .v.sm{font-size:1.15rem;font-weight:600;padding-top:6px}
+.stat .s{font-size:.82rem;color:var(--muted);min-height:1.2em}
+.row2{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:18px}
+.silos{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:18px;margin-bottom:18px}
+@media (max-width:820px){.row2{grid-template-columns:1fr}.silos{grid-template-columns:1fr}}
+.panel{background:var(--surface);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow)}
+.panel h2{margin:0 0 14px;font-size:1.05rem;font-weight:600}
+.chart{position:relative;height:320px}
+.legendlist{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px 18px;font-size:.9rem}
+.legendlist li{display:flex;align-items:center;gap:7px}
+.sw{width:12px;height:12px;border-radius:4px;display:inline-block}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin:16px 0}
+.hcard{text-align:left;padding:14px 16px;border-radius:14px;display:block;width:100%;border-color:transparent;box-shadow:var(--shadow)}
+.hcard:hover{border-color:var(--steel);transform:translateY(-1px)}
+.hcard .hh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.hcard .hh b{font-size:1.25rem}
+.hcard .hh span{font-variant-numeric:tabular-nums;font-size:.95rem;color:var(--muted)}
+.hcard .sl{font-size:.83rem;color:var(--muted);margin-top:10px}
+.hcard.none{opacity:.6}
+.seg{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--soft)}
+.seg i{display:block}
+.tablebox{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:500;background:var(--soft)}
+tbody tr:hover{background:#f8fbfe}
+td.num{font-variant-numeric:tabular-nums}
+.empty{color:var(--muted);padding:32px;text-align:center}
+.dateinfo{font-size:.85rem;color:var(--muted);margin:-8px 0 16px}
+.dateinfo.warn{color:var(--bad)}
+.sec{margin:24px 0 10px;font-size:1.1rem;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>แดชบอร์ดอาหารไซโล</h1>
+    <div class="status"><span class="dot" id="dot"></span><span id="statusText">กำลังโหลด…</span>
+      <button id="refresh" type="button">รีเฟรช</button></div>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <nav class="chips" id="chips" aria-label="เลือกเล้า"></nav>
+
+  <div class="controls">
+    <label>ตั้งแต่วันที่ <input type="date" id="from"></label>
+    <label>ถึงวันที่ <input type="date" id="to"></label>
+    <label>รูปแบบวันที่ในชีต <select id="dateFmt">
+      <option value="DMY">วัน/เดือน/ปี</option>
+      <option value="auto">ตรวจอัตโนมัติ</option>
+      <option value="MDY">เดือน/วัน/ปี</option></select></label>
+    <label id="modeWrap" hidden>รูปแบบกราฟ <select id="mode">
+      <option value="daily">รายวัน (แยกสีตามเบอร์อาหาร)</option>
+      <option value="total">รวมตามเบอร์อาหาร</option></select></label>
+  </div>
+
+  <div id="dateInfo" class="dateinfo"></div>
+
+  <main id="content"></main>
+
+  <details class="panel" id="rawBox" style="margin-top:18px" open>
+    <summary style="cursor:pointer;font-weight:600">ข้อมูลดิบจากชีต (ไว้ตรวจสอบ ส่งภาพส่วนนี้ให้ผมได้)</summary>
+    <div class="tablebox" id="rawTable" style="margin-top:12px"></div>
+  </details>
+</div>
+
+<script>
+/* ===================== ตั้งค่าตรงนี้ ===================== */
+const CONFIG = {
+  // ลิงก์ CSV ของ Google Sheet (เผยแพร่ไปยังเว็บ) ถ้าเว้นว่างจะแสดงข้อมูลตัวอย่าง
+  // วางลิงก์ Google Sheet ปกติ (ลิงก์แชร์/ลิงก์ edit) ได้เลย โค้ดจะแปลงเป็น CSV ให้เอง
+  CSV_URL: "https://docs.google.com/spreadsheets/d/12o70T-aTBSXKe46NRVrMAjxU_GHIAeDVvJaJVyIxUKU/edit?usp=sharing",
+  REFRESH_SECONDS: 30,        // ดึงข้อมูลใหม่ทุกกี่วินาที
+  DATE_FORMAT: "DMY",         // "DMY" = วัน/เดือน/ปี (ไทย) | "MDY" = เดือน/วัน/ปี | ปี พ.ศ. แปลงให้เองอัตโนมัติ
+  UNIT: "กก.",                // หน่วยของปริมาณอาหาร
+  HOUSES: ["H1","H2","H3","H4","H5","H6","H7","H8","H9","H10","H11","H12"],
+
+  // ปล่อยว่างไว้ให้ตรวจจับอัตโนมัติ หรือใส่ชื่อหัวคอลัมน์ให้ตรงกับชีตเป๊ะๆ
+  DATE_COLUMN: "",
+  HOUSE_COLUMN: "",
+
+  // กรณีตรวจจับคอลัมน์ไซโลไม่ได้ ระบุเองได้ เช่น
+  // SILOS: [
+  //   { silo: 1, feed: "เบอร์อาหาร ไซโล 1", qty: "ปริมาณ ไซโล 1" },
+  //   { silo: 2, feed: "เบอร์อาหาร ไซโล 2", qty: "ปริมาณ ไซโล 2" }
+  // ]
+  SILOS: [],
+
+  // กรณีชีตเป็นแบบ 1 แถวต่อ 1 ไซโล (มีคอลัมน์ไซโล / เบอร์ / ปริมาณ) ระบุเองได้ถ้าตรวจไม่เจอ
+  SILO_COLUMN: "", FEED_COLUMN: "", QTY_COLUMN: ""
+};
+/* ======================================================== */
+
+const $ = s => document.querySelector(s);
+const PALETTE = ["#3b8beb","#f5a623","#34b27b","#ef6a5b","#9b7be0","#2cb5b5",
+                 "#e873a8","#a5b92f","#ff8a3d","#5fb04a","#5c7cfa","#c4956a"];
+const UNIT = CONFIG.UNIT;
+const state = {sig:"", entries:[], houses:[], feeds:[], view:"overview", demo:false};
+let charts = [];
+
+/* ---------- ตัวช่วย ---------- */
+function showRaw(rows){
+  const el=$("#rawTable"); if(!el) return;
+  el.innerHTML="<table><tbody>"+rows.slice(0,6).map((r,i)=>
+    "<tr>"+r.map(c=>i===0?`<th>${esc(c)}</th>`:`<td>${esc(c)}</td>`).join("")+"</tr>").join("")+"</tbody></table>"+
+    `<div class="s" style="font-size:.82rem;color:var(--muted);margin-top:8px">ทั้งหมด ${rows.length-1} แถว · แสดง 5 แถวแรก</div>`;
+}
+function parseCSV(text){
+  const rows=[]; let row=[], cur="", q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else if(c==='"') q=true;
+    else if(c===","){ row.push(cur); cur=""; }
+    else if(c==="\n"||c==="\r"){ if(c==="\r"&&text[i+1]==="\n")i++; row.push(cur); rows.push(row); row=[]; cur=""; }
+    else cur+=c;
+  }
+  if(cur!==""||row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+function parseNum(v){
+  if(v==null) return null; const s=String(v).trim().replace(/,/g,"");
+  return /^-?\d+(\.\d+)?$/.test(s)?parseFloat(s):null;
+}
+const TH_M=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const EN_M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function monthNum(n){
+  n=String(n).trim().toLowerCase().replace(/\./g,"");
+  const full=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+  let i=full.findIndex(f=>n.startsWith(f)); if(i>=0) return i+1;
+  i=["มค","กพ","มีค","เมย","พค","มิย","กค","สค","กย","ตค","พย","ธค"].indexOf(n); if(i>=0) return i+1;
+  i=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"].indexOf(n.slice(0,3));
+  return i>=0?i+1:0;
+}
+const stripTime=v=>String(v==null?"":v).trim().replace(/[ T]\d{1,2}:\d{2}.*$/,"").replace(/^วัน[ก-๙]*?ที่\s*/,"").trim();
+
+/* ตรวจว่าชีตใช้ วัน/เดือน/ปี หรือ เดือน/วัน/ปี จากข้อมูลทั้งคอลัมน์ */
+function detectFmt(vals){
+  const f=state.fmtOverride||CONFIG.DATE_FORMAT; if(f!=="auto") return f;
+  let dm=0,md=0,fd=0,fm=0; const lim=Date.now()+2*864e5;
+  vals.forEach(v=>{
+    const m=stripTime(v).match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/); if(!m) return;
+    const a=+m[1], b=+m[2]; let y=+m[3]; if(y>2400) y-=543; if(y<100) y+=2000;
+    if(a>12) dm++; else if(b>12) md++;
+    if(b<=12&&Date.UTC(y,b-1,a)>lim) fd++;
+    if(a<=12&&Date.UTC(y,a-1,b)>lim) fm++;
+  });
+  if(dm!==md) return dm>md?"DMY":"MDY";
+  if(fd!==fm) return fd<fm?"DMY":"MDY";
+  return "DMY";
+}
+/* จำรูปแบบการแสดงวันที่ของชีต เพื่อให้เว็บแสดงเหมือนกัน */
+function detectStyle(vals,fmt){
+  const st={kind:"named",order:"DMY",sep:"/",be:false,pad:true,thai:/[ก-๙]/.test(vals.join(""))};
+  let one=false,zero=false;
+  const chk=p=>{ if(p.length===1) one=true; else if(p[0]==="0") zero=true; };
+  vals.forEach(v=>{
+    const s=stripTime(v); let m;
+    if((m=s.match(/^(\d{4})([\/.-])(\d{1,2})[\/.-](\d{1,2})$/))){
+      st.kind="numeric"; st.order="YMD"; st.sep=m[2]; if(+m[1]>2400) st.be=true; chk(m[3]); chk(m[4]);
+    }else if((m=s.match(/^(\d{1,2})([\/.-])(\d{1,2})[\/.-](\d{2,4})$/))){
+      st.kind="numeric"; st.order=fmt; st.sep=m[2]; if(+m[4]>2400) st.be=true; chk(m[1]); chk(m[3]);
+    }else if((m=s.match(/(\d{4})/))&&+m[1]>2400) st.be=true;
+  });
+  st.pad=zero||!one;
+  return st;
+}
+function parseDate(v,fmt){
+  if(v==null) return null; const s=stripTime(v); if(!s) return null;
+  fmt=fmt||state.dateFmt||"MDY"; let y,m,d,a;
+  if((a=s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})$/))){ y=+a[1]; m=+a[2]; d=+a[3]; }
+  else if((a=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/))){
+    const p=+a[1], q=+a[2]; y=+a[3];
+    if(fmt==="DMY"){ d=p; m=q; } else { m=p; d=q; }
+  }
+  else if((a=s.match(/^(\d{1,2})\s*[-\s]?\s*([^\d\s\-\/]+)\s*[-\s,]?\s*(\d{2,4})$/))&&monthNum(a[2])){ d=+a[1]; m=monthNum(a[2]); y=+a[3]; }
+  else if((a=s.match(/^([^\d\s\-\/]+)\s*(\d{1,2}),?\s*(\d{4})$/))&&monthNum(a[1])){ m=monthNum(a[1]); d=+a[2]; y=+a[3]; }
+  else return null;
+  if(y>2400) y-=543; if(y<100) y+=2000;
+  if(m<1||m>12||d<1||d>31) return null;
+  return new Date(Date.UTC(y,m-1,d)).toISOString().slice(0,10);
+}
+function fmtShort(k){
+  const [,m,d]=k.split("-").map(Number), st=state.dateStyle||{kind:"named",thai:true};
+  if(st.kind==="numeric"){
+    const p=n=>st.pad?String(n).padStart(2,"0"):String(n);
+    return st.order==="DMY"?`${p(d)}${st.sep}${p(m)}`:`${p(m)}${st.sep}${p(d)}`;
+  }
+  return `${d} ${(st.thai?TH_M:EN_M)[m-1]}`;
+}
+function fmtLong(k){
+  const [y0,m,d]=k.split("-").map(Number), st=state.dateStyle||{kind:"named",thai:true,be:true};
+  const y=st.be?y0+543:y0;
+  if(st.kind==="numeric"){
+    const p=n=>st.pad?String(n).padStart(2,"0"):String(n);
+    const parts=st.order==="YMD"?[y,p(m),p(d)]:st.order==="MDY"?[p(m),p(d),y]:[p(d),p(m),y];
+    return parts.join(st.sep);
+  }
+  return `${d} ${(st.thai?TH_M:EN_M)[m-1]} ${y}`;
+}
+const fmtNum  =n=>n==null?"–":n.toLocaleString("th-TH",{maximumFractionDigits:2});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const natural=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true});
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const sum=l=>l.reduce((a,e)=>a+e.qty,0);
+const colorOf=f=>PALETTE[Math.max(0,state.feeds.indexOf(f))%PALETTE.length];
+function feedLabel(v){ v=(v||"").trim(); if(!v) return "ไม่ระบุเบอร์"; return /^\d+(\.\d+)?$/.test(v)?"เบอร์ "+v:v; }
+function daysRange(from,to){
+  const out=[]; if(!from||!to) return out;
+  for(let t=Date.parse(from+"T00:00:00Z");t<=Date.parse(to+"T00:00:00Z");t+=864e5) out.push(new Date(t).toISOString().slice(0,10));
+  return out;
+}
+
+/* ---------- ข้อมูลตัวอย่าง (ชีตแบบ 1 แถวต่อ 1 เล้า มี 2 ไซโล) ---------- */
+function demoCSV(){
+  let seed=11; const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const out=[["ประทับเวลา","วันที่","เล้า","เบอร์อาหาร ไซโล 1","ปริมาณ ไซโล 1 (กก.)","เบอร์อาหาร ไซโล 2","ปริมาณ ไซโล 2 (กก.)"]];
+  const t=new Date();
+  for(let i=29;i>=0;i--){
+    const dt=new Date(Date.UTC(t.getFullYear(),t.getMonth(),t.getDate()-i));
+    const mdy=`${dt.getUTCMonth()+1}/${dt.getUTCDate()}/${dt.getUTCFullYear()}`;
+    const age=29-i;
+    CONFIG.HOUSES.forEach((h,hi)=>{
+      if(rnd()<0.07) return;
+      const stage=age+(hi%3)*3, f1=stage<10?311:stage<20?312:313, f2=stage<12?311:stage<22?312:313;
+      out.push([mdy+" 08:00:00",mdy,h,f1,Math.round(300+age*12+rnd()*80),f2,Math.round(280+age*11+rnd()*80)]);
+    });
+  }
+  return out.map(r=>r.join(",")).join("\n");
+}
+
+/* ---------- โหลด + แปลงข้อมูล ---------- */
+function csvCandidates(u){
+  const m=u.match(/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  if(!m||/\/d\/e\//.test(u)||/output=csv|tqx=out:csv|format=csv/.test(u)) return [u];
+  const id=m[1], g=(u.match(/[#&?]gid=(\d+)/)||[])[1], gp=g?"&gid="+g:"";
+  return [`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv${gp}`,
+          `https://docs.google.com/spreadsheets/d/${id}/export?format=csv${gp}`];
+}
+async function load(){
+  try{
+    let text;
+    if(!CONFIG.CSV_URL){ text=demoCSV(); state.demo=true; }
+    else{
+      let lastErr="";
+      for(const base of csvCandidates(CONFIG.CSV_URL)){
+        try{
+          const u=base+(base.includes("?")?"&":"?")+"_="+Date.now();
+          const r=await fetch(u,{cache:"no-store"});
+          if(!r.ok){ lastErr="HTTP "+r.status; continue; }
+          const t=await r.text();
+          if(t.trimStart().startsWith("<")){ lastErr="Google ขอให้ล็อกอิน (ชีตยังไม่ได้แชร์เป็น \"ทุกคนที่มีลิงก์\")"; continue; }
+          text=t; break;
+        }catch(err){ lastErr="เบราว์เซอร์บล็อกการดึงข้อมูล (ลองเปิดจากเว็บที่โฮสต์ เช่น Netlify/GitHub Pages)"; }
+      }
+      if(text==null) throw new Error("อ่านข้อมูลจาก Google Sheet ไม่ได้: "+lastErr);
+      state.demo=false;
+    }
+    state.lastRows=parseCSV(text);
+    showRaw(state.lastRows);
+    build(state.lastRows);
+    setStatus(true);
+  }catch(e){ setStatus(false,e.message||String(e)); }
+}
+function setStatus(ok,msg){
+  $("#dot").className="dot "+(ok?"ok":"err");
+  $("#statusText").textContent=ok?"อัปเดตล่าสุด "+new Date().toLocaleTimeString("th-TH"):"เชื่อมต่อไม่ได้";
+  const b=$("#banner");
+  if(!ok){ b.hidden=false; b.className="banner err"; b.textContent=msg; }
+  else if(state.demo){ b.hidden=false; b.className="banner";
+    b.textContent="กำลังแสดงข้อมูลตัวอย่าง ใส่ลิงก์ CSV ของ Google Sheet ในตัวแปร CSV_URL เพื่อแสดงข้อมูลจริง"; }
+  else b.hidden=true;
+}
+
+const SILO_RE=/(?:ไซโล|silo)\s*(?:ที่|no\.?|#)?\s*(\d+)/i;
+const QTY_RE=/ปริมาณ|จำนวน|น้ำหนัก|kg|กก|qty|amount|quantity|ถุง|ตัน/i;
+const FEED_RE=/เบอร์|number|no\.?|เกรด|ชนิด|feed|อาหาร/i;
+
+function build(rows){
+  if(rows.length<2) throw new Error("ชีตยังไม่มีข้อมูล");
+  const headers=rows[0].map(h=>h.trim());
+  const body=rows.slice(1).filter(r=>r.some(c=>c.trim()!==""));
+  const find=(name,re,skip)=>name?headers.indexOf(name):headers.findIndex((h,i)=>re.test(h)&&!(skip&&skip(h,i)));
+  const tsIdx=find("",/ประทับเวลา|timestamp/i);
+  let dateIdx=find(CONFIG.DATE_COLUMN,/วันที่|date/i); if(dateIdx<0) dateIdx=tsIdx;
+  const houseIdx=find(CONFIG.HOUSE_COLUMN,/เล้า|house|coop/i);
+  if(dateIdx<0) throw new Error("ไม่พบคอลัมน์วันที่ ให้ตั้งชื่อใน DATE_COLUMN");
+  if(houseIdx<0) throw new Error("ไม่พบคอลัมน์เล้า ให้ตั้งชื่อใน HOUSE_COLUMN");
+
+  /* หาคอลัมน์ไซโลแบบกว้าง (ไซโล 1 / ไซโล 2 อยู่คนละคอลัมน์) */
+  let silos=[];
+  if(CONFIG.SILOS.length){
+    silos=CONFIG.SILOS.map(s=>({silo:+s.silo,feedIdx:[headers.indexOf(s.feed)],qtyIdx:[headers.indexOf(s.qty)]}));
+  }else{
+    const mp=new Map();
+    headers.forEach((h,i)=>{
+      const m=h.match(SILO_RE); if(!m) return;
+      const role=QTY_RE.test(h)?"qty":FEED_RE.test(h)?"feed":null; if(!role) return;
+      const n=+m[1]; if(!mp.has(n)) mp.set(n,{silo:n,feedIdx:[],qtyIdx:[]});
+      mp.get(n)[role==="qty"?"qtyIdx":"feedIdx"].push(i);
+    });
+    silos=[...mp.values()].sort((a,b)=>a.silo-b.silo);
+  }
+  /* หรือแบบยาว (1 แถวต่อ 1 ไซโล) */
+  let long=null;
+  if(!silos.length){
+    const siloCol=find(CONFIG.SILO_COLUMN,/ไซโล|silo/i);
+    const qtyCol=find(CONFIG.QTY_COLUMN,QTY_RE);
+    const feedCol=find(CONFIG.FEED_COLUMN,FEED_RE,(h,i)=>QTY_RE.test(h)||i===qtyCol||i===siloCol);
+    if(siloCol>=0&&qtyCol>=0) long={siloCol,qtyCol,feedCol};
+  }
+  if(!silos.length&&!long)
+    throw new Error("ไม่พบคอลัมน์ไซโล/เบอร์อาหาร/ปริมาณ หัวคอลัมน์ที่พบ: "+headers.join(" | ")+" — ให้ระบุเองใน CONFIG.SILOS");
+
+  const rawDates=body.map(r=>r[dateIdx]);
+  state.dateFmt=detectFmt(rawDates); state.dateStyle=detectStyle(rawDates,state.dateFmt);
+  /* แสดงวันที่บนแดชบอร์ดเป็น วัน/เดือน/ปี (dd/mm/yyyy) เสมอ ส่วนปี พ.ศ./ค.ศ. ตามที่ชีตใช้ */
+  Object.assign(state.dateStyle,{kind:"numeric",order:"DMY",sep:"/",pad:true});
+  state.sampleRaw=String(rawDates.find(x=>x&&String(x).trim())||"").trim();
+  let bad=0, badSample="";
+  const entries=[];
+  body.forEach(r=>{
+    const key=parseDate(r[dateIdx],state.dateFmt), house=(r[houseIdx]||"").trim().toUpperCase();
+    if(!key&&house){ bad++; if(!badSample) badSample=String(r[dateIdx]||"(ว่าง)"); }
+    if(!key||!house) return;
+    if(long){
+      const sn=(String(r[long.siloCol]||"").match(/\d+/)||[])[0], q=parseNum(r[long.qtyCol]);
+      if(!sn||q==null) return;
+      entries.push({key,house,silo:+sn,feed:feedLabel(r[long.feedCol]),qty:q});
+    }else silos.forEach(s=>{
+      const n=Math.max(s.feedIdx.length,s.qtyIdx.length);
+      for(let j=0;j<n;j++){
+        const q=parseNum(r[s.qtyIdx[j]]); if(q==null) continue;
+        entries.push({key,house,silo:s.silo,feed:feedLabel(r[s.feedIdx[j]]),qty:q});
+      }
+    });
+  });
+  if(!entries.length) throw new Error("พบคอลัมน์แล้ว แต่ยังไม่มีแถวที่อ่านค่าปริมาณได้ (ตรวจรูปแบบวันที่และตัวเลข)"+(bad?` — อ่านวันที่ไม่ได้ ${bad} แถว เช่น “${badSample}”`:""));
+
+  state.bad=bad; state.badSample=badSample;
+  state.entries=entries;
+  state.feeds=[...new Set(entries.map(e=>e.feed))].sort(natural);
+  state.houses=[...new Set([...CONFIG.HOUSES,...entries.map(e=>e.house)])].sort(natural);
+
+  const sig=headers.join("|");
+  if(sig!==state.sig){ state.sig=sig; initControls(); }
+  render();
+}
+
+function initControls(){
+  $("#chips").innerHTML=[["overview","ภาพรวม"],...state.houses.map(h=>[h,h])]
+    .map(([v,t])=>`<button type="button" class="chip" data-v="${esc(v)}">${esc(t)}</button>`).join("");
+  const keys=state.entries.map(e=>e.key).sort();
+  const max=keys[keys.length-1];
+  const start=new Date(Date.parse(max+"T00:00:00Z")-29*864e5).toISOString().slice(0,10);
+  $("#from").value=start>keys[0]?start:keys[0]; $("#to").value=max;
+}
+
+/* ---------- วาดกราฟ ---------- */
+function stacked(list,cats,catOf){
+  const m=new Map(); list.forEach(e=>{const k=e.feed+"\u0001"+catOf(e); m.set(k,(m.get(k)||0)+e.qty);});
+  return state.feeds.filter(f=>list.some(e=>e.feed===f)).map(f=>({
+    label:f,backgroundColor:colorOf(f),stack:"s",
+    data:cats.map(c=>m.get(f+"\u0001"+c)??null)}));
+}
+function mk(id,cfg){ charts.push(new Chart(document.getElementById(id),cfg)); }
+function axisOpts(){
+  const g={color:css("--line")};
+  return {x:{stacked:true,grid:{display:false},ticks:{maxTicksLimit:12}},
+          y:{stacked:true,beginAtZero:true,grid:g,title:{display:true,text:UNIT}}};
+}
+function baseOpts(legend=true){
+  return {responsive:true,maintainAspectRatio:false,animation:false,
+    plugins:{legend:{display:legend,labels:{boxWidth:12,color:css("--ink")}},
+      tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmtNum(c.parsed.y)} ${UNIT}`}}},
+    scales:axisOpts()};
+}
+const stat=(k,v,s,sm)=>`<div class="stat"><div class="k">${k}</div><div class="v${sm?" sm":""}">${v}</div><div class="s">${s||"&nbsp;"}</div></div>`;
+const swatchList=list=>{
+  const fs=state.feeds.filter(f=>list.some(e=>e.feed===f));
+  return `<ul class="legendlist">`+fs.map(f=>`<li><span class="sw" style="background:${colorOf(f)}"></span>${esc(f)} <b>${fmtNum(sum(list.filter(e=>e.feed===f)))} ${UNIT}</b></li>`).join("")+`</ul>`;
+};
+
+function showDateInfo(){
+  const el=$("#dateInfo"); if(!state.sampleRaw){ el.textContent=""; return; }
+  const k=parseDate(state.sampleRaw,state.dateFmt);
+  let t=`วันที่ในชีต “${state.sampleRaw}” → เว็บอ่านเป็น ${k?fmtLong(k):"อ่านไม่ได้"}`;
+  if(state.bad) t+=` · อ่านวันที่ไม่ได้ ${state.bad} แถว (เช่น “${state.badSample}”)`;
+  el.textContent=t; el.className="dateinfo"+(state.bad?" warn":"");
+}
+function render(){
+  showDateInfo();
+  charts.forEach(c=>c.destroy()); charts=[];
+  Chart.defaults.color=css("--muted");
+  Chart.defaults.font.family='"IBM Plex Sans Thai","Noto Sans Thai",sans-serif';
+  const from=$("#from").value, to=$("#to").value;
+  const list=state.entries.filter(e=>(!from||e.key>=from)&&(!to||e.key<=to));
+  document.querySelectorAll(".chip").forEach(b=>b.setAttribute("aria-current",String(b.dataset.v===state.view)));
+  $("#modeWrap").hidden=state.view==="overview";
+  if(state.view==="overview") renderOverview(list,from,to); else renderHouse(state.view,list,from,to);
+}
+
+function renderOverview(list,from,to){
+  const days=daysRange(from,to);
+  const latest=state.entries.reduce((a,e)=>e.key>a?e.key:a,"");
+  const done=new Set(state.entries.filter(e=>e.key===latest).map(e=>e.house));
+  const missing=state.houses.filter(h=>!done.has(h));
+  const withData=state.houses.filter(h=>list.some(e=>e.house===h));
+  const el=$("#content");
+  el.innerHTML=
+    `<section class="stats">`+
+      stat("ปริมาณรวมทุกเล้า",fmtNum(sum(list)),UNIT+" ในช่วงที่เลือก")+
+      stat("เบอร์อาหารที่ใช้",new Set(list.map(e=>e.feed)).size,"ชนิด")+
+      stat("เล้าที่มีข้อมูล",`${withData.length}/${state.houses.length}`,"ในช่วงที่เลือก")+
+      stat("ข้อมูลล่าสุด",latest?fmtLong(latest):"–",missing.length?"ยังไม่กรอก: "+esc(missing.join(", ")):"ครบทุกเล้า",true)+
+    `</section>`+
+    `<div class="row2">
+       <div class="panel"><h2>ปริมาณอาหารรายเล้า แยกตามเบอร์</h2><div class="chart"><canvas id="cHouse"></canvas></div></div>
+       <div class="panel"><h2>สัดส่วนเบอร์อาหารรวมทุกเล้า</h2><div class="chart"><canvas id="cFeed"></canvas></div></div>
+     </div>
+     <div class="panel"><h2>ปริมาณรายวันรวมทุกเล้า แยกตามเบอร์</h2><div class="chart"><canvas id="cDaily"></canvas></div></div>
+     <div class="sec">สรุปรายเล้า (กดเพื่อดูรายละเอียดแต่ละไซโล)</div>
+     <div class="hgrid">`+
+     state.houses.map(h=>{
+       const hl=list.filter(e=>e.house===h);
+       if(!hl.length) return `<button type="button" class="hcard none" data-h="${esc(h)}"><div class="hh"><b>${esc(h)}</b><span>–</span></div><div class="seg"></div><div class="sl">ไม่มีข้อมูลในช่วงนี้</div></button>`;
+       const seg=state.feeds.map(f=>{const q=sum(hl.filter(e=>e.feed===f)); return q?`<i title="${esc(f)}" style="flex:${q};background:${colorOf(f)}"></i>`:"";}).join("");
+       const silos=[...new Set(hl.map(e=>e.silo))].sort((a,b)=>a-b)
+         .map(s=>`ไซโล ${s}: ${fmtNum(sum(hl.filter(e=>e.silo===s)))}`).join(" · ");
+       return `<button type="button" class="hcard" data-h="${esc(h)}"><div class="hh"><b>${esc(h)}</b><span>${fmtNum(sum(hl))} ${UNIT}</span></div><div class="seg">${seg}</div><div class="sl">${silos}</div></button>`;
+     }).join("")+`</div>`;
+
+  mk("cHouse",{type:"bar",data:{labels:state.houses,datasets:stacked(list,state.houses,e=>e.house)},options:baseOpts()});
+  const feeds=state.feeds.filter(f=>list.some(e=>e.feed===f));
+  mk("cFeed",{type:"doughnut",data:{labels:feeds,datasets:[{data:feeds.map(f=>sum(list.filter(e=>e.feed===f))),
+      backgroundColor:feeds.map(colorOf),borderColor:css("--surface")}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{position:"bottom",labels:{boxWidth:12,color:css("--ink")}},
+        tooltip:{callbacks:{label:c=>` ${c.label}: ${fmtNum(c.parsed)} ${UNIT}`}}}}});
+  mk("cDaily",{type:"bar",data:{labels:days.map(fmtShort),datasets:stacked(list,days,e=>e.key)},options:baseOpts()});
+}
+
+function renderHouse(h,list,from,to){
+  const hl=list.filter(e=>e.house===h);
+  const el=$("#content");
+  if(!hl.length){ el.innerHTML=`<div class="panel"><div class="empty">${esc(h)} ไม่มีข้อมูลในช่วงวันที่ที่เลือก</div></div>`; return; }
+  const siloNos=[...new Set(hl.map(e=>e.silo))].sort((a,b)=>a-b);
+  const latestKey=hl.reduce((a,e)=>e.key>a?e.key:a,"");
+  const latestFeeds=siloNos.map(s=>{
+    const sl=hl.filter(e=>e.silo===s), k=sl.reduce((a,e)=>e.key>a?e.key:a,"");
+    return `ไซโล ${s}: ${esc([...new Set(sl.filter(e=>e.key===k).map(e=>e.feed))].join(", "))}`;
+  }).join(" · ");
+  const mode=$("#mode").value, days=daysRange(from,to);
+
+  el.innerHTML=
+    `<section class="stats">`+
+      stat("ปริมาณรวม "+esc(h),fmtNum(sum(hl)),UNIT+" ในช่วงที่เลือก")+
+      stat("จำนวนวันที่บันทึก",new Set(hl.map(e=>e.key)).size,"วัน")+
+      stat("บันทึกล่าสุด",fmtLong(latestKey),"",true)+
+      stat("เบอร์อาหารล่าสุด",latestFeeds,"",true)+
+    `</section>`+
+    `<div class="silos">`+siloNos.map(s=>
+      `<div class="panel"><h2>${esc(h)} · ไซโล ${s}</h2><div class="chart"><canvas id="cs${s}"></canvas></div>${swatchList(hl.filter(e=>e.silo===s))}</div>`
+    ).join("")+`</div>`+
+    `<div class="panel"><h2>รายการล่าสุดของ ${esc(h)}</h2><div class="tablebox"><table><thead><tr>
+       <th>วันที่</th><th>ไซโล</th><th>เบอร์อาหาร</th><th>ปริมาณ (${UNIT})</th></tr></thead><tbody>`+
+      [...hl].sort((a,b)=>b.key.localeCompare(a.key)||a.silo-b.silo).slice(0,60)
+        .map(e=>`<tr><td>${fmtLong(e.key)}</td><td>${e.silo}</td><td>${esc(e.feed)}</td><td class="num">${fmtNum(e.qty)}</td></tr>`).join("")+
+    `</tbody></table></div></div>`;
+
+  siloNos.forEach(s=>{
+    const sl=hl.filter(e=>e.silo===s);
+    if(mode==="daily"){
+      mk("cs"+s,{type:"bar",data:{labels:days.map(fmtShort),datasets:stacked(sl,days,e=>e.key)},options:baseOpts()});
+    }else{
+      const fs=state.feeds.filter(f=>sl.some(e=>e.feed===f));
+      const o=baseOpts(false); o.scales.x.stacked=false; o.scales.y.stacked=false;
+      mk("cs"+s,{type:"bar",data:{labels:fs,datasets:[{label:"ปริมาณรวม",data:fs.map(f=>sum(sl.filter(e=>e.feed===f))),
+        backgroundColor:fs.map(colorOf),borderRadius:3}]},options:o});
+    }
+  });
+}
+
+/* ---------- เริ่มทำงาน ---------- */
+function applyHash(){
+  const h=decodeURIComponent(location.hash.slice(1)).toUpperCase();
+  state.view=state.houses.includes(h)?h:"overview";
+  if(state.entries.length) render();
+}
+$("#chips").addEventListener("click",e=>{
+  const b=e.target.closest("[data-v]"); if(b) location.hash=b.dataset.v==="overview"?"overview":b.dataset.v;
+});
+$("#content").addEventListener("click",e=>{
+  const b=e.target.closest("[data-h]"); if(b){ location.hash=b.dataset.h; window.scrollTo({top:0}); }
+});
+["from","to","mode"].forEach(id=>$("#"+id).addEventListener("change",()=>state.entries.length&&render()));
+$("#refresh").addEventListener("click",load);
+window.addEventListener("hashchange",applyHash);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>state.entries.length&&render());
+
+try{ const sv=localStorage.getItem("silo_dateFmt2"); if(sv) state.fmtOverride=sv; }catch(_){}
+$("#dateFmt").value=state.fmtOverride||CONFIG.DATE_FORMAT;
+$("#dateFmt").addEventListener("change",e=>{
+  state.fmtOverride=e.target.value;
+  try{ localStorage.setItem("silo_dateFmt2",state.fmtOverride); }catch(_){}
+  if(state.lastRows){ state.sig=""; try{ build(state.lastRows); setStatus(true); }catch(err){ setStatus(false,err.message); } }
+});
+(async()=>{ await load(); applyHash(); })();
+setInterval(load,Math.max(5,CONFIG.REFRESH_SECONDS)*1000);
+</script>
+</body>
+</html>
